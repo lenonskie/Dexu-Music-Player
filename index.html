@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>DEXU Music Player</title>
+<link rel="manifest" href="manifest.json">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+html{height:100%;height:100dvh}
+body{background:#05111F;color:#fff;font-family:'JetBrains Mono',monospace;height:100%;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(600px 500px at 50% 0%, rgba(0,200,255,0.22), transparent 60%), radial-gradient(500px 400px at 20% 80%, rgba(0,255,180,0.15), transparent 60%);pointer-events:none;z-index:0}
+.header{position:relative;z-index:10;display:flex;justify-content:space-between;align-items:center;padding:calc(6px + env(safe-area-inset-top)) 16px 6px 16px;flex-shrink:0}
+.logo{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(22px,6.5vw,30px);letter-spacing:1px}
+.btn-add{border:0;padding:6px 10px;border-radius:9px;background:linear-gradient(135deg, #00B2FF, #00FFDD);color:#00111A;font-weight:800;font-size:clamp(8px,2.4vw,10px);box-shadow:0 0 12px rgba(0,200,255,0.25);cursor:pointer}
+.main{position:relative;z-index:1;padding:0 16px 0 16px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;margin-top:0px;overflow:visible}
+
+/* Centered Orb Row */
+.orb-main-row{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:clamp(85px,22vw,105px);overflow:visible;transition:0.4s ease;margin-bottom:0px;padding-bottom:0;border-bottom:none}
+.orb-center-wrap{position:relative;display:flex;align-items:center;justify-content:center;transition:0.4s ease}
+.orb-center-wrap.hidden{opacity:0;transform:scale(0.3);pointer-events:none;position:absolute}
+
+/* Buttons removed - playlist moved up */
+.buttons-stack{display:none !important}
+.orb-right-lyrics{display:none !important}
+/* End removed */
+/* Buttons Stack Left of Center DX */
+.buttons-stack{position:absolute;left:4px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:10}
+.karaoke-btn{width:44px;height:44px;border-radius:50%;background:rgba(5,20,40,0.85);border:1px solid rgba(0,220,255,0.32);color:rgba(0,220,255,0.7);font-size:6px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0px;cursor:pointer;backdrop-filter:blur(8px);box-shadow:0 0 0 1px rgba(0,220,255,0.1), 0 4px 15px rgba(0,0,0,0.3);transition:0.25s;line-height:0.95;text-align:center;padding:2px}
+.karaoke-btn .k-icon{font-size:14px}
+.karaoke-btn.active{background:linear-gradient(135deg, #00B2FF, #00FFDD);color:#00111A;box-shadow:0 0 15px rgba(0,255,220,0.5), 0 0 30px rgba(0,180,255,0.3);transform:scale(1.05)}
+.lyrics-toggle-btn{width:42px;height:38px;border-radius:12px;background:rgba(5,20,40,0.85);border:1px solid rgba(0,220,255,0.25);color:rgba(0,220,255,0.6);font-size:8px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;backdrop-filter:blur(8px);transition:0.25s;line-height:1.1;text-align:center}
+.lyrics-toggle-btn .k-icon{font-size:14px}
+.lyrics-toggle-btn.active{background:rgba(0,255,180,0.15);border-color:rgba(0,255,180,0.4);color:#00FFAA;box-shadow:0 0 10px rgba(0,255,180,0.25)}
+.lyrics-toggle-btn.off{opacity:0.5}
+
+/* Smoke */
+.smoke-container{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:clamp(130px,36vw,175px);height:clamp(130px,36vw,175px);pointer-events:none;z-index:0}
+.smoke{position:absolute;border-radius:50%;filter:blur(12px);opacity:0;will-change:transform,opacity}
+.smoke-1{width:60px;height:60px;background:radial-gradient(circle, rgba(0,220,255,0.55) 0%, rgba(0,200,255,0) 70%);top:20%;left:15%;animation:smokeFloat1 6s ease-in-out infinite}
+.smoke-2{width:45px;height:70px;background:radial-gradient(ellipse, rgba(0,255,180,0.42) 0%, rgba(0,255,180,0) 70%);top:30%;right:10%;animation:smokeFloat2 7s ease-in-out infinite 1s}
+.smoke-3{width:50px;height:50px;background:radial-gradient(circle, rgba(0,200,255,0.48) 0%, rgba(0,180,255,0) 70%);bottom:15%;left:25%;animation:smokeFloat3 5.5s ease-in-out infinite 0.5s}
+.smoke-4{width:35px;height:55px;background:radial-gradient(ellipse, rgba(0,230,255,0.35) 0%, rgba(0,220,255,0) 70%);top:10%;right:25%;animation:smokeFloat4 6.5s ease-in-out infinite 1.5s}
+@keyframes smokeFloat1{0%{transform:translate(0,0) scale(0.8);opacity:0}20%{opacity:0.6}50%{transform:translate(8px,-25px) scale(1.2);opacity:0.4}80%{opacity:0.2}100%{transform:translate(15px,-45px) scale(1.5);opacity:0}}
+@keyframes smokeFloat2{0%{transform:translate(0,0) scale(0.7);opacity:0}25%{opacity:0.5}50%{transform:translate(-10px,-20px) scale(1.1);opacity:0.35}100%{transform:translate(-18px,-40px) scale(1.4);opacity:0}}
+@keyframes smokeFloat3{0%{transform:translate(0,0) scale(0.9);opacity:0}20%{opacity:0.45}60%{transform:translate(5px,-18px) scale(1.15);opacity:0.25}100%{transform:translate(10px,-35px) scale(1.3);opacity:0}}
+@keyframes smokeFloat4{0%{transform:translate(0,0) scale(0.6);opacity:0}30%{opacity:0.4}70%{transform:translate(-6px,-22px) scale(1.2);opacity:0.2}100%{transform:translate(-12px,-38px) scale(1.5);opacity:0}}
+
+.orb{width:clamp(90px,24vw,115px);height:clamp(90px,24vw,115px);border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;background:radial-gradient(60px 38px at 30% 28%, rgba(255,255,255,0.32), transparent 60%), radial-gradient(circle at center, rgba(0,200,255,0.22) 0%, rgba(5,30,60,0.5) 40%, rgba(2,10,22,0.98) 75%);border:1px solid rgba(0,255,220,0.45);box-shadow:inset 0 1px 0 rgba(255,255,255,0.22), inset 0 8px 18px rgba(0,255,220,0.18), 0 0 0 1px rgba(0,255,220,0.28), 0 0 22px rgba(0,220,255,0.35), 0 0 42px rgba(0,255,180,0.18);z-index:1}
+.orb::after{content:'';position:absolute;inset:-12px;border-radius:50%;background:radial-gradient(circle, rgba(0,255,220,0.32) 0%, rgba(0,200,255,0.18) 45%, transparent 75%);filter:blur(18px);z-index:-1}
+.orb-dx{font-family:'Space Grotesk',sans-serif;font-size:clamp(26px,7.5vw,34px);font-weight:700;color:transparent;-webkit-text-stroke:1.8px rgba(255,255,255,0.98);text-shadow:0 0 8px rgba(255,255,255,0.9), 0 0 16px rgba(0,255,220,0.75), 0 0 28px rgba(0,200,255,0.55);letter-spacing:1px}
+
+/* Lyrics occupying DX space - centered */
+.orb-right-lyrics{position:absolute;top:58%;left:58px;right:2px;transform:translateY(-50%);height:clamp(175px,50vw,235px);background:rgba(5,22,42,0.85);border:1px solid rgba(0,220,255,0.35);border-radius:18px;overflow:hidden;backdrop-filter:blur(14px);display:none;flex-direction:column;z-index:2;box-shadow:0 0 28px rgba(0,200,255,0.22), inset 0 1px 0 rgba(255,255,255,0.12);width:auto}
+.orb-right-lyrics.show{display:flex;animation:lyricsExpand 0.4s ease}
+@keyframes lyricsExpand{0%{opacity:0;transform:translateY(-50%) scaleX(0.7)}100%{opacity:1;transform:translateY(-50%) scaleX(1)}}
+.lyrics-header{padding:6px 12px 4px 12px;font-size:8px;color:rgba(0,220,255,0.5);font-weight:700;letter-spacing:0.5px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(0,220,255,0.08);flex-shrink:0}
+.lyrics-title{color:#00FFDD;font-size:9px}
+.lyrics-body{flex:1;overflow-y:auto;padding:2px 6px;font-size:clamp(14px,3.8vw,17px);line-height:2;color:rgba(255,255,255,0.9);white-space:pre-wrap;word-break:break-word;-webkit-overflow-scrolling:touch}
+.lyrics-body::-webkit-scrollbar{width:2px}
+.lyrics-body::-webkit-scrollbar-thumb{background:linear-gradient(#00A8FF, #00FFDD);border-radius:2px}
+.lyrics-line{opacity:0;transform:translateY(8px);animation:lyricFadeIn 0.6s ease forwards;width:100%;max-width:100%;box-sizing:border-box;white-space:normal;word-break:break-word;overflow-wrap:break-word;line-height:1.5;padding:3px 6px;border-radius:6px}
+.lyrics-line.active{color:#00FFDD;text-shadow:0 0 10px rgba(0,255,220,0.6);font-weight:700;background:rgba(0,255,220,0.12);padding:4px 8px;border-radius:8px;margin:2px 0;box-sizing:border-box;width:100%}
+@keyframes lyricFadeIn{to{opacity:1;transform:translateY(0)}}
+.lyrics-empty{color:rgba(0,220,255,0.4);font-size:11px;text-align:center;padding:18px 10px;line-height:1.6}
+.lyrics-fade-top, .lyrics-fade-bottom{position:absolute;left:0;right:0;height:18px;pointer-events:none;z-index:1}
+.lyrics-fade-top{top:24px;background:linear-gradient(to bottom, rgba(5,22,42,0.9), transparent)}
+.lyrics-fade-bottom{bottom:0;background:linear-gradient(to top, rgba(5,22,42,0.9), transparent)}
+
+.now-playing{text-align:center;margin:4px 0 0 0;width:100%;padding-top:2px;position:relative;z-index:1;border-top:none}
+.now-label{font-size:clamp(10px,2.8vw,11px);color:#00D4FF;margin-bottom:1px;font-weight:600;letter-spacing:0.5px}
+.now-title{font-family:'Space Grotesk',sans-serif;font-size:clamp(13px,3.8vw,17px);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;padding:0 8px}
+#nowArtist{font-size:clamp(9px,2.6vw,10px);color:rgba(0,220,255,0.4);margin-top:1px}
+.progress{width:100%;margin:2px 0 0 0}
+.progress-bar{width:100%;height:5px;background:rgba(0,180,255,0.1);border-radius:10px;position:relative;cursor:pointer;border:1px solid rgba(0,200,255,0.1)}
+.progress-fill{height:100%;background:linear-gradient(90deg, #00A8FF, #00FFDD);border-radius:10px;width:0%;box-shadow:0 0 8px rgba(0,255,200,0.5);position:relative}
+.progress-fill::after{content:'';position:absolute;right:-3px;top:50%;transform:translateY(-50%);width:9px;height:9px;background:#fff;border-radius:50%;box-shadow:0 0 6px #00E5CC;border:1px solid #00E5CC}
+.time-row{display:flex;justify-content:space-between;font-size:clamp(9px,2.8vw,10px);color:rgba(0,200,255,0.5);margin-top:3px;font-weight:600}
+.controls{display:flex;justify-content:center;align-items:center;gap:clamp(14px,5vw,24px);margin:2px 0 0 0}
+.ctrl-btn{font-family: Calibri, "Segoe UI", sans-serif; font-weight:400;background:none;border:0;color:rgba(0,200,255,0.45);font-size:clamp(16px,4.5vw,19px);cursor:pointer;width:clamp(30px,7.5vw,36px);height:clamp(30px,7.5vw,36px);display:flex;align-items:center;justify-content:center}
+.ctrl-btn.play{width:clamp(46px,10.5vw,52px);height:clamp(46px,10.5vw,52px);border-radius:50%;background:linear-gradient(135deg, #00B2FF, #00FFDD);color:#00111A;box-shadow:0 0 12px rgba(0,200,255,0.4);font-size:clamp(16px,4.5vw,18px);font-weight:800}
+.search-wrap{position:relative;z-index:1;margin:6px 16px 0 16px;flex-shrink:0}
+.search-input{width:100%;padding:10px 12px 10px 38px;border-radius:10px;border:1px solid rgba(0,220,255,0.32);background:rgba(5,20,40,0.6);color:#fff;font-family:'JetBrains Mono',monospace;font-size:clamp(10px,3vw,12px);outline:none}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#00D4FF;font-size:14px}
+.queue{position:relative;z-index:1;margin-top:2px;padding:0 16px calc(8px + env(safe-area-inset-bottom)) 16px;flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;border-top:none}
+.queue-head{display:flex;justify-content:space-between;align-items:center;font-size:clamp(10px,2.8vw,11px);color:#00D4FF;margin-bottom:5px;font-weight:700;flex-shrink:0}
+.queue-actions{display:flex;gap:4px}
+.q-btn{border:1px solid rgba(0,200,255,0.22);background:rgba(0,120,255,0.08);color:#fff;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;cursor:pointer;font-family:'JetBrains Mono',monospace}
+.q-btn.delete{display:none}
+.q-btn.delete.show{display:block;background:rgba(255,80,120,0.12);border-color:rgba(255,80,120,0.25);color:#ff7eb0}
+.q-btn.selectall{display:none}
+.q-btn.selectall.show{display:block}
+.queue-list{flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch}
+.queue-list::-webkit-scrollbar{width:2px}
+.queue-list::-webkit-scrollbar-thumb{background:linear-gradient(#00B2FF, #00FFDD);border-radius:2px}
+.track{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid rgba(0,180,255,0.08);cursor:pointer;gap:8px}
+.track-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.checkbox{width:17px;height:17px;border:1.2px solid rgba(0,200,255,0.3);border-radius:4px;display:none;align-items:center;justify-content:center;flex-shrink:0;background:rgba(0,200,255,0.04)}
+.checkbox.show{display:flex}
+.checkbox.checked{background:linear-gradient(135deg, #00B2FF, #00FFDD);border-color:transparent;color:#00111A;font-size:9px;font-weight:800}
+.track-name{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:clamp(17px,4.8vw,21px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;color:rgba(255,255,255,0.92);line-height:1.35}
+.track-name span{color:rgba(0,220,255,0.35);font-weight:400}
+.track-time{font-size:clamp(9px,2.6vw,10px);color:rgba(0,200,255,0.4);font-weight:600;flex-shrink:0}
+.empty{text-align:center;padding:20px 16px;color:rgba(0,200,255,0.25);font-size:12px;line-height:1.6}
+.selection-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(2,8,16,0.96);border-top:1px solid rgba(0,200,255,0.15);padding:10px 16px calc(10px + env(safe-area-inset-bottom)) 16px;display:none;justify-content:space-between;align-items:center;z-index:20}
+.selection-bar.show{display:flex}
+.sel-count{font-size:10px;color:#00E5CC;font-weight:700}
+.sel-actions{display:flex;gap:6px}
+.btn-cancel{border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#fff;padding:7px 11px;border-radius:14px;font-size:9px;font-weight:700;cursor:pointer}
+.btn-delete{border:0;background:linear-gradient(135deg, #00B2FF, #00FFDD);color:#00111A;padding:7px 12px;border-radius:14px;font-size:9px;font-weight:800;cursor:pointer}
+
+/* Dark line fix - removed bottom borders and enhanced DX */
+.lyrics-fade-bottom{display:none !important; height:0 !important;}
+.main,.orb-main-row,.now-playing,.progress{border:none !important; box-shadow:none !important;}
+/* --- UPGRADED FINGER HOLD SCROLL - NO DESIGN CHANGE --- */
+.lyrics-body{
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+.lyrics-body:active{
+  cursor: grabbing;
+}
+.lyrics-body.dragging{
+  scroll-behavior: auto !important;
+}
+.orb-right-lyrics{
+  touch-action: pan-y;
+}
+.lyrics-ctrl-btn{
+  touch-action: manipulation;
+}
+
+</style>
+
+<style>
+#vocalControls{padding:8px; background:rgba(0,255,220,0.06); border-radius:8px; margin:6px 0; font-family:Calibri, sans-serif;}
+.lyrics-controls-hidden{position:absolute; top:4px; right:4px; display:flex; gap:4px; z-index:5;}
+.lyrics-ctrl-btn{width:28px; height:28px; border-radius:6px; background:rgba(0,255,220,0.2); border:1px solid rgba(0,255,220,0.3); color:#00FFDD; cursor:pointer;}
+.lyrics-body{overflow-y:auto !important; -webkit-overflow-scrolling:touch;}
+.lyrics-edit-panel{position:absolute; inset:0; background:#020B18; z-index:20; display:none; flex-direction:column; padding:8px;}
+.lyrics-edit-panel.active{display:flex;}
+
+/* --- UPGRADED FINGER HOLD SCROLL - NO DESIGN CHANGE --- */
+.lyrics-body{
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+.lyrics-body:active{
+  cursor: grabbing;
+}
+.lyrics-body.dragging{
+  scroll-behavior: auto !important;
+}
+.orb-right-lyrics{
+  touch-action: pan-y;
+}
+.lyrics-ctrl-btn{
+  touch-action: manipulation;
+}
+
+</style>
+<style>.lyrics-controls,.lyrics-ctrl-btn{display:none!important;} .lyrics-body{overflow-y:auto!important; touch-action:pan-y!important; padding:10px 8px 40px 8px!important;} .progress-bar, input[type=range]{touch-action:pan-x!important; pointer-events:auto!important;}
+/* --- UPGRADED FINGER HOLD SCROLL - NO DESIGN CHANGE --- */
+.lyrics-body{
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+.lyrics-body:active{
+  cursor: grabbing;
+}
+.lyrics-body.dragging{
+  scroll-behavior: auto !important;
+}
+.orb-right-lyrics{
+  touch-action: pan-y;
+}
+.lyrics-ctrl-btn{
+  touch-action: manipulation;
+}
+
+</style></head>
+<body>
+
+<div class="header">
+  <div class="logo">DEXU</div>
+  <button class="btn btn-add" id="addBtn">+ ADD MUSIC</button>
+</div>
+
+<div class="main">
+  <div class="orb-main-row" id="orbMainRow">
+    
+    
+    <div class="orb-center-wrap" id="orbCenterWrap">
+      <div class="smoke-container">
+        <div class="smoke smoke-1"></div>
+        <div class="smoke smoke-2"></div>
+        <div class="smoke smoke-3"></div>
+        <div class="smoke smoke-4"></div>
+      </div>
+      <div class="orb"><div class="orb-dx">DX</div></div>
+    </div>
+    
+    
+      
+    </div>
+  </div>
+  
+  <div class="now-playing">
+    <div class="now-label">Now Playing</div>
+    <div class="now-title" id="nowTitle">NO TRACK</div>
+    <div id="nowArtist">TAP + ADD MUSIC</div>
+  </div>
+  <div class="progress">
+    <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="time-row"><span id="currTime">0:00</span><span id="totalTime">0:00</span></div>
+  </div>
+  <div class="controls">
+    <button class="ctrl-btn" id="repeatBtn" title="Repeat" style="font-family: Calibri, 'Segoe UI', sans-serif; font-weight: 400;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
+    <button class="ctrl-btn" id="prevBtn">◀◀</button>
+    <button class="ctrl-btn play" id="playBtn">▶</button>
+    <button class="ctrl-btn" id="nextBtn">▶▶</button>
+    <button class="ctrl-btn" id="shuffleBtn" title="Shuffle" style="font-family: Calibri, 'Segoe UI', sans-serif; font-weight: 400;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/><path d="M4 14l5 5"/></svg></button>
+  </div>
+</div>
+
+<div class="search-wrap">
+  <span class="search-icon">🔍</span>
+  <input type="text" class="search-input" id="searchInput" placeholder="Search songs, albums, artists...">
+</div>
+
+<div class="queue">
+  <div class="queue-head">
+    <span>Queue • <span id="queueCount">0 tracks</span></span>
+        <div class="queue-actions">
+      <button class="q-btn selectall" id="selectAllBtn">ALL</button>
+      <button class="q-btn" id="renameSelectedBtn" style="display:none;background:linear-gradient(135deg,#00B2FF,#00FFDD);color:#00111A;border:0;padding:6px 12px;border-radius:8px;font-weight:800;font-size:11px;cursor:pointer">RENAME</button>
+      <button class="q-btn delete" id="deleteSelectedBtn" style="display:none;background:rgba(255,80,120,0.18);border-color:rgba(255,80,120,0.35);color:#ff7eb0;">DEL (0)</button>
+      <button class="q-btn" id="selectBtn">SELECT</button>
+    </div>
+  </div>
+  <div class="queue-list" id="queueList"><div class="empty">NO MUSIC YET<br>TAP + ADD MUSIC<br>Center DX • Lyrics occupies DX space</div></div>
+</div>
+
+<div class="selection-bar" id="selectionBar">
+  <span class="sel-count" id="selCount">0 selected</span>
+  <div class="sel-actions">
+    <button class="btn-cancel" id="cancelSelBtn">CANCEL</button>
+    <button class="btn-delete" id="deleteBtn">DELETE</button>
+  </div>
+</div>
+
+<audio id="audioPlayer" preload="metadata" playsinline crossorigin="anonymous"></audio>
+
+<script>
+let audioContext, sourceNode, gainNode, bassFilter, midFilter, trebleFilter, compressor, bassBoost;
+let splitter, merger, leftGain, rightGain, vocalFilterLow, vocalFilterHigh;
+let isKaraokeOn = false;
+let isAudioEngineReady = false;
+
+function initAudioEngine(){
+  if(isAudioEngineReady) return;
+  try{
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    sourceNode = audioContext.createMediaElementSource(audio);
+    splitter = audioContext.createChannelSplitter(2);
+    merger = audioContext.createChannelMerger(2);
+    leftGain = audioContext.createGain(); leftGain.gain.value = 1;
+    rightGain = audioContext.createGain(); rightGain.gain.value = -1;
+    vocalFilterLow = audioContext.createBiquadFilter(); vocalFilterLow.type = 'highpass'; vocalFilterLow.frequency.value = 180;
+    vocalFilterHigh = audioContext.createBiquadFilter(); vocalFilterHigh.type = 'lowpass'; vocalFilterHigh.frequency.value = 4500;
+    bassFilter = audioContext.createBiquadFilter(); bassFilter.type='lowshelf'; bassFilter.frequency.value=120; bassFilter.gain.value=3.5;
+    midFilter = audioContext.createBiquadFilter(); midFilter.type='peaking'; midFilter.frequency.value=1000; midFilter.Q.value=1; midFilter.gain.value=1.2;
+    trebleFilter = audioContext.createBiquadFilter(); trebleFilter.type='highshelf'; trebleFilter.frequency.value=8000; trebleFilter.gain.value=2.2;
+    bassBoost = audioContext.createBiquadFilter(); bassBoost.type='lowshelf'; bassBoost.frequency.value=65; bassBoost.gain.value=3.5;
+    compressor = audioContext.createDynamicsCompressor(); compressor.threshold.value=-22; compressor.knee.value=18; compressor.ratio.value=4.5; compressor.attack.value=0.008; compressor.release.value=0.22;
+    gainNode = audioContext.createGain(); gainNode.gain.value=0.92;
+    sourceNode.connect(bassFilter); bassFilter.connect(bassBoost); bassBoost.connect(midFilter); midFilter.connect(trebleFilter); trebleFilter.connect(compressor); compressor.connect(gainNode); gainNode.connect(audioContext.destination);
+    isAudioEngineReady=true;
+  }catch(e){}
+}
+function enableKaraoke(){
+  if(!isAudioEngineReady) return;
+  try{
+    sourceNode.disconnect(); bassFilter.disconnect(); bassBoost.disconnect(); midFilter.disconnect(); trebleFilter.disconnect(); compressor.disconnect(); gainNode.disconnect();
+    sourceNode.connect(splitter); splitter.connect(leftGain, 0); splitter.connect(rightGain, 1); leftGain.connect(merger, 0, 0); rightGain.connect(merger, 0, 0); leftGain.connect(merger, 0, 1); rightGain.connect(merger, 0, 1);
+    merger.connect(vocalFilterLow); vocalFilterLow.connect(vocalFilterHigh); vocalFilterHigh.connect(bassFilter); bassFilter.connect(bassBoost); bassBoost.connect(midFilter); midFilter.connect(trebleFilter); trebleFilter.connect(compressor); compressor.connect(gainNode); gainNode.connect(audioContext.destination);
+    isKaraokeOn = true;
+  }catch(e){}
+}
+function disableKaraoke(){
+  if(!isAudioEngineReady) return;
+  try{
+    sourceNode.disconnect(); splitter.disconnect(); leftGain.disconnect(); rightGain.disconnect(); merger.disconnect(); vocalFilterLow.disconnect(); vocalFilterHigh.disconnect(); bassFilter.disconnect(); bassBoost.disconnect(); midFilter.disconnect(); trebleFilter.disconnect(); compressor.disconnect(); gainNode.disconnect();
+    sourceNode.connect(bassFilter); bassFilter.connect(bassBoost); bassBoost.connect(midFilter); midFilter.connect(trebleFilter); trebleFilter.connect(compressor); compressor.connect(gainNode); gainNode.connect(audioContext.destination);
+    isKaraokeOn = false;
+  }catch(e){}
+}
+
+const audio=document.getElementById('audioPlayer');
+const addBtn=document.getElementById('addBtn');
+const queueList=document.getElementById('queueList');
+const nowTitle=document.getElementById('nowTitle');
+const nowArtist=document.getElementById('nowArtist');
+const playBtn=document.getElementById('playBtn');
+const prevBtn=document.getElementById('prevBtn');
+const nextBtn=document.getElementById('nextBtn');
+const progressBar=document.getElementById('progressBar');
+const progressFill=document.getElementById('progressFill');
+const currTimeEl=document.getElementById('currTime');
+const totalTimeEl=document.getElementById('totalTime');
+const queueCount=document.getElementById('queueCount');
+const searchInput=document.getElementById('searchInput');
+const selectBtn=document.getElementById('selectBtn');
+const selectAllBtn=document.getElementById('selectAllBtn');
+const deleteSelectedBtn=document.getElementById('deleteSelectedBtn');
+const selectionBar=document.getElementById('selectionBar');
+const selCount=document.getElementById('selCount');
+const cancelSelBtn=document.getElementById('cancelSelBtn');
+const deleteBtn=document.getElementById('deleteBtn');
+const karaokeBtn = document.getElementById('karaokeBtn');
+const lyricsBtn = document.getElementById('lyricsBtn');
+const lyricsPanel = document.getElementById('lyricsPanel');
+const lyricsBody = document.getElementById('lyricsBody');
+const lyricsTitle = document.getElementById('lyricsTitle');
+const lyricsStatus = document.getElementById('lyricsStatus');
+const lyricsSource = document.getElementById('lyricsSource');
+const orbMainRow = document.getElementById('orbMainRow');
+const orbCenterWrap = document.getElementById('orbCenterWrap');
+
+let tracks=[], filteredTracks=[], currentIndex=-1, isPlaying=false, isDragging=false, searchQuery='', isSelectMode=false, selectedIds=new Set();
+let isLyricsOn = false;
+let currentLyrics = '';
+
+const DB_NAME='DexuMusicDB',DB_VERSION=1,STORE_NAME='tracks';
+function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onerror=()=>reject(r.error);r.onsuccess=()=>resolve(r.result);r.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME,{keyPath:'id',autoIncrement:true});};});}
+async function saveTrackToDB(file){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(STORE_NAME,'readwrite');const req=tx.objectStore(STORE_NAME).add({name:file.name,file:file,size:file.size,date:Date.now()});req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error);});}
+async function getAllTracksFromDB(){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(STORE_NAME,'readonly');const req=tx.objectStore(STORE_NAME).getAll();req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error);});}
+async function deleteTrackFromDB(id){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(STORE_NAME,'readwrite');const req=tx.objectStore(STORE_NAME).delete(id);req.onsuccess=()=>res();req.onerror=()=>rej(req.error);});}
+async function loadSavedTracks(){try{const saved=await getAllTracksFromDB();for(const item of saved){const url=URL.createObjectURL(item.file);tracks.push({id:item.id,file:item.file,url:url,name:item.name.replace(/\.[^/.]+$/,''),size:item.size});}filteredTracks=[...tracks];if(tracks.length>0){renderQueue();nowArtist.textContent=tracks.length+' TRACKS SAVED';queueCount.textContent=tracks.length+' tracks';}}catch(e){}}
+loadSavedTracks();
+function formatTime(s){if(isNaN(s)) return '0:00';const m=Math.floor(s/60),sec=Math.floor(s%60);return m+':'+String(sec).padStart(2,'0');}
+
+searchInput.addEventListener('input', e=>{searchQuery=e.target.value.toLowerCase();filteredTracks = searchQuery==='' ? [...tracks] : tracks.filter(t=>t.name.toLowerCase().includes(searchQuery));renderQueue();});
+selectBtn.addEventListener('click', ()=>{isSelectMode=!isSelectMode;selectedIds.clear();if(isSelectMode){selectBtn.textContent='CANCEL';selectAllBtn.classList.add('show');deleteSelectedBtn.classList.add('show');deleteSelectedBtn.style.display='flex';selectionBar.classList.add('show');}else{selectBtn.textContent='SELECT';selectAllBtn.classList.remove('show');deleteSelectedBtn.classList.remove('show');deleteSelectedBtn.style.display='none';document.getElementById('renameSelectedBtn').style.display='none';selectionBar.classList.remove('show');}renderQueue();updateSelectionUI();});
+selectAllBtn.addEventListener('click', ()=>{const listToRender = searchQuery ? filteredTracks : tracks;if(selectedIds.size===listToRender.length){selectedIds.clear();}else{listToRender.forEach(t=>selectedIds.add(t.id));}renderQueue();updateSelectionUI();});
+cancelSelBtn.addEventListener('click', ()=>{isSelectMode=false;selectedIds.clear();selectBtn.textContent='SELECT';selectAllBtn.classList.remove('show');deleteSelectedBtn.classList.remove('show');deleteSelectedBtn.style.display='none';document.getElementById('renameSelectedBtn').style.display='none';selectionBar.classList.remove('show');renderQueue();});
+deleteSelectedBtn.addEventListener('click', deleteSelected);
+const renameSelectedBtn=document.getElementById('renameSelectedBtn'); if(renameSelectedBtn){ renameSelectedBtn.addEventListener('click', ()=>{ if(selectedIds.size===1){ const id=[...selectedIds][0]; renameTrackById(id); } }); }
+deleteBtn.addEventListener('click', deleteSelected);
+async function deleteSelected(){if(selectedIds.size===0) return;if(!confirm('Delete '+selectedIds.size+' songs?')) return;const idsToDelete=[...selectedIds];for(const id of idsToDelete){const idx=tracks.findIndex(t=>t.id===id);if(idx!==-1){try{await deleteTrackFromDB(id);URL.revokeObjectURL(tracks[idx].url);tracks.splice(idx,1);if(idx===currentIndex){audio.pause();audio.src='';isPlaying=false;playBtn.textContent='▶';currentIndex=-1;nowTitle.textContent='NO TRACK';}else if(idx<currentIndex) currentIndex--;}catch(e){}}}selectedIds.clear();filteredTracks = searchQuery==='' ? [...tracks] : tracks.filter(t=>t.name.toLowerCase().includes(searchQuery));isSelectMode=false;selectBtn.textContent='SELECT';selectAllBtn.classList.remove('show');deleteSelectedBtn.classList.remove('show');selectionBar.classList.remove('show');renderQueue();queueCount.textContent=tracks.length+' tracks';}
+function updateSelectionUI(){const count=selectedIds.size;selCount.textContent=count+' selected';deleteSelectedBtn.textContent='DEL ('+count+')';deleteBtn.textContent='DELETE ('+count+')';selectAllBtn.textContent = count>0 && count=== (searchQuery ? filteredTracks.length : tracks.length) ? 'NONE' : 'ALL'; const renameBtn=document.getElementById('renameSelectedBtn'); if(renameBtn){ if(isSelectMode && count===1){ renameBtn.style.display='flex'; } else if(isSelectMode && count>1){ renameBtn.style.display='none'; } else if(!isSelectMode){ renameBtn.style.display='none'; } } if(isSelectMode){ deleteSelectedBtn.style.display='flex'; } }
+
+async function updateTrackInDB(id, newName){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(STORE_NAME,'readwrite');
+    const store=tx.objectStore(STORE_NAME);
+    const getReq=store.get(id);
+    getReq.onsuccess=()=>{
+      const data=getReq.result;
+      if(data){
+        data.name=newName;
+        const putReq=store.put(data);
+        putReq.onsuccess=()=>res();
+        putReq.onerror=()=>rej(putReq.error);
+      } else res();
+    };
+    getReq.onerror=()=>rej(getReq.error);
+  });
+}
+async function renameTrackById(id){
+  const track = tracks.find(t=>t.id===id);
+  if(!track) return;
+  const currentName = track.name;
+  // Use custom modal if exists else prompt
+  let newName = prompt('RENAME SONG:\n', currentName);
+  if(newName===null) return;
+  newName = newName.trim();
+  if(newName==='' || newName===currentName) return;
+  track.name = newName;
+  try{ await updateTrackInDB(id, newName); }catch(e){ console.log('DB rename failed',e); }
+  // Update filtered
+  filteredTracks = searchQuery ? tracks.filter(t=>t.name.toLowerCase().includes(searchQuery)) : [...tracks];
+  renderQueue();
+  if(tracks.indexOf(track)===currentIndex){
+    nowTitle.textContent=newName;
+  }
+  // Update media session
+  if(window.updateMediaSessionLock) window.updateMediaSessionLock();
+}
+function setupRenameLongPress(){
+  const list = document.getElementById('queueList');
+  if(!list) return;
+  let pressTimer;
+  let longPressedId=null;
+  list.addEventListener('touchstart', e=>{
+    const trackEl = e.target.closest('.track');
+    if(!trackEl) return;
+    const id = parseInt(trackEl.dataset.id);
+    pressTimer = setTimeout(()=>{
+      longPressedId=id;
+      if(navigator.vibrate) navigator.vibrate(50);
+      trackEl.style.transform='scale(0.97)';
+      setTimeout(()=>{ trackEl.style.transform=''; renameTrackById(id); },150);
+    }, 600);
+  }, {passive:true});
+  list.addEventListener('touchend', ()=>{ clearTimeout(pressTimer); });
+  list.addEventListener('touchmove', ()=>{ clearTimeout(pressTimer); });
+  // Right-click for desktop
+  list.addEventListener('contextmenu', e=>{
+    const trackEl = e.target.closest('.track');
+    if(!trackEl) return;
+    e.preventDefault();
+    const id = parseInt(trackEl.dataset.id);
+    renameTrackById(id);
+  });
+}
+window.addEventListener('load', ()=> setTimeout(setupRenameLongPress, 1000));
+
+
+let fileInput=null;
+function createFileInput(){fileInput=document.createElement('input');fileInput.type='file';fileInput.multiple=true;fileInput.style.display='none';document.body.appendChild(fileInput);fileInput.onchange=e=>{const files=Array.from(e.target.files);if(files.length>0) addTracks(files);};}createFileInput();
+addBtn.addEventListener('click', async ()=>{initAudioEngine();if(audioContext && audioContext.state==='suspended') await audioContext.resume();if('showOpenFilePicker' in window){try{const handles=await window.showOpenFilePicker({multiple:true,types:[{description:'Audio',accept:{'audio/*':['.mp3','.flac','.wav','.m4a','.ogg','.aac']}}]});const files=[];for(const h of handles) files.push(await h.getFile());if(files.length>0){addTracks(files);return;}}catch(err){if(err.name==='AbortError') return;}}fileInput.value='';fileInput.click();});
+async function addTracks(fileList){const files=Array.from(fileList).filter(f=>{const n=f.name.toLowerCase();return n.endsWith('.mp3')||n.endsWith('.flac')||n.endsWith('.wav')||n.endsWith('.m4a')||n.endsWith('.ogg')||n.endsWith('.aac')||n.endsWith('.wma')||f.type.startsWith('audio/')||f.type==='';});if(files.length===0){alert('No MP3 found');return;}addBtn.textContent='SAVING...';for(const file of files){try{const id=await saveTrackToDB(file);const url=URL.createObjectURL(file);tracks.push({id:id,file:file,url:url,name:file.name.replace(/\.[^/.]+$/,''),size:file.size});}catch(e){}}filteredTracks = searchQuery==='' ? [...tracks] : tracks.filter(t=>t.name.toLowerCase().includes(searchQuery));renderQueue();if(currentIndex===-1) playTrack(0);queueCount.textContent=tracks.length+' tracks';addBtn.textContent='✓ '+files.length+' ADDED';setTimeout(()=>addBtn.textContent='+ ADD MUSIC',2000);}
+function renderQueue(){const listToRender = searchQuery ? filteredTracks : tracks;if(listToRender.length===0){queueList.innerHTML = searchQuery ? '<div class="empty">NO RESULTS FOR "'+escapeHtml(searchQuery)+'"</div>' : '<div class="empty">NO MUSIC YET<br>TAP + ADD MUSIC</div>';return;}queueList.innerHTML=listToRender.map((t)=>{const originalIndex=tracks.indexOf(t);const isSelected=selectedIds.has(t.id);const isActive=originalIndex===currentIndex;const parts=t.name.split(' - ');const title=parts[0];const artist=parts[1] || '';return `<div class="track ${isActive?'active':''}" data-index="${originalIndex}" data-id="${t.id}"><div class="track-left"><div class="checkbox ${isSelectMode?'show':''} ${isSelected?'checked':''}">${isSelected?'✓':''}</div><div class="track-name">${escapeHtml(title)} ${artist ? '<span>— '+escapeHtml(artist)+'</span>' : ''}</div></div><div class="track-time">${isActive&&isPlaying&&!isSelectMode?'▶':''}</div></div>`;}).join('');queueList.querySelectorAll('.track').forEach(el=>{el.addEventListener('click', ()=>{const idx=parseInt(el.dataset.index);const id=parseInt(el.dataset.id);if(isSelectMode){if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);renderQueue();updateSelectionUI();}else{playTrack(idx);}});});}
+function escapeHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+async function playTrack(index){if(index<0||index>=tracks.length) return;initAudioEngine();if(audioContext && audioContext.state==='suspended') await audioContext.resume();currentIndex=index;const track=tracks[index];audio.src=track.url;audio.volume=1;audio.play().then(()=>{isPlaying=true;playBtn.textContent='❚❚';nowTitle.textContent=track.name;nowArtist.textContent='PLAYING • BEST SOUND HD'; if(isLyricsOn){ setTimeout(fetchLyricsForCurrent, 600); }});renderQueue();}
+
+karaokeBtn.addEventListener('click', async ()=>{
+  initAudioEngine();
+  if(audioContext && audioContext.state==='suspended') await audioContext.resume();
+  if(!isKaraokeOn){
+    enableKaraoke();
+    karaokeBtn.classList.add('active');
+    karaokeBtn.innerHTML = '<span class="k-icon">🎤</span><span class="karaoke-label" style="font-size:5.5px;line-height:0.9">KARAOKE<br>ON</span>';
+    nowArtist.textContent = 'KARAOKE MODE • VOICE REMOVED • SING!';
+  } else {
+    disableKaraoke();
+    karaokeBtn.classList.remove('active');
+    karaokeBtn.innerHTML = '<span class="k-icon">🎤</span><span class="karaoke-label" style="font-size:5.5px;line-height:0.9">KARAOKE<br>OFF</span>';
+    nowArtist.textContent = isPlaying ? 'PLAYING • BEST SOUND HD' : 'TAP + ADD MUSIC';
+  }
+});
+
+lyricsBtn.addEventListener('click', ()=>{
+  isLyricsOn = !isLyricsOn;
+  if(isLyricsOn){
+    lyricsBtn.classList.remove('off');
+    lyricsBtn.classList.add('active');
+    lyricsStatus.textContent = 'ON';
+    lyricsPanel.classList.add('show');
+    lyricsPanel.style.display = 'flex';
+    orbCenterWrap.classList.add('hidden');
+    // DX completely vanished, lyrics occupies its space (center)
+    if(currentIndex !== -1){
+      fetchLyricsForCurrent();
+    } else {
+      lyricsBody.innerHTML = '<div class="lyrics-empty">🎵 Lyrics Mode<br>DX hidden, lyrics here<br>Play song to auto-load<br>via WiFi<br><br>Readable for singer!</div>';
+    }
+  } else {
+    lyricsBtn.classList.add('off');
+    lyricsBtn.classList.remove('active');
+    lyricsStatus.textContent = 'OFF';
+    lyricsPanel.classList.remove('show');
+    lyricsPanel.style.display = 'none';
+    orbCenterWrap.classList.remove('hidden');
+  }
+});
+
+async function fetchLyricsForCurrent(){
+  if(!isLyricsOn || currentIndex === -1) return;
+  const track = tracks[currentIndex];
+  if(!track) return;
+  let title = track.name;
+  let artist = '';
+  if(title.includes(' - ')){
+    const parts = title.split(' - ');
+    if(parts[0].length < 30){
+      artist = parts[0].trim();
+      title = parts[1].trim();
+    } else {
+      title = parts[0].trim();
+      artist = parts[1].trim();
+    }
+  }
+  lyricsTitle.textContent = '🎵 ' + title.substring(0, 22);
+  lyricsBody.innerHTML = '<div class="lyrics-empty">🔍 Searching lyrics<br>for: ' + escapeHtml(title) + (artist ? '<br>by ' + escapeHtml(artist) : '') + '<br><br>WiFi required...</div>';
+  try{
+    if(!navigator.onLine){
+      lyricsBody.innerHTML = '<div class="lyrics-empty">📵 No WiFi/Internet<br>Connect to WiFi<br>to load lyrics</div>';
+      return;
+    }
+    let url = artist ? `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}` : `https://api.lyrics.ovh/v1/${encodeURIComponent(title)}/_`;
+    let response = await fetch(url);
+    let data = null;
+    if(response.ok){
+      data = await response.json();
+    } else if(artist){
+      const url2 = `https://api.lyrics.ovh/v1/${encodeURIComponent(title)}/${encodeURIComponent(artist)}`;
+      const r2 = await fetch(url2);
+      if(r2.ok) data = await r2.json();
+    }
+    if(data && data.lyrics && data.lyrics.trim().length > 10){
+      displayLyricsWithFade(data.lyrics);
+      lyricsSource.textContent = 'lyrics.ovh ✓';
+    } else {
+      lyricsBody.innerHTML = '<div class="lyrics-empty">😔 Lyrics not found<br>for: ' + escapeHtml(track.name) + '<br><br>Try Artist - Title format<br><br>🎤 You can still sing<br>with karaoke mode!</div>';
+      lyricsSource.textContent = 'Not found';
+    }
+  }catch(e){
+    lyricsBody.innerHTML = '<div class="lyrics-empty">🌐 WiFi Error<br>Check internet<br>and try again<br><br>🎤 Karaoke still works!</div>';
+    lyricsSource.textContent = 'Error';
+  }
+}
+
+function displayLyricsWithFade(lyricsText){
+  const lines = lyricsText.split('\n').filter(l => l.trim().length > 0);
+  currentLyrics = lyricsText;
+  let html = '';
+  lines.forEach((line, i)=>{
+    html += `<div class="lyrics-line" style="animation-delay:${i*0.08}s">${escapeHtml(line)}</div>`;
+  });
+  lyricsBody.innerHTML = html;
+  // MANUAL ONLY - NO AUTO SCROLL
+  lyricsBody.scrollTop = 0;
+  lyricsBody.style.overflowY = 'auto';
+  lyricsBody.style.touchAction = 'pan-y';
+  lyricsBody.style.webkitOverflowScrolling = 'touch';
+  // Removed auto interval and auto timeupdate - user controls 100%
+}
+let lastHighlighted = -1;
+let isUserScrollingLyrics = false;
+let userScrollTimeout = null;
+
+function highlightLyricLine(){
+  // DISABLED AUTO-SCROLL - only highlight, never auto scroll
+  // User requested manual control only
+  return;
+  
+  // Old auto logic disabled:
+  // if(!isLyricsOn || !currentLyrics) return;
+  // const lines = lyricsBody.querySelectorAll('.lyrics-line');
+  // if(lines.length === 0) return;
+  // const progress = audio.currentTime / audio.duration;
+  // const targetIndex = Math.floor(progress * lines.length);
+  // if(targetIndex !== lastHighlighted && targetIndex >=0 && targetIndex < lines.length){
+  //   if(lastHighlighted >=0 && lines[lastHighlighted]){
+  //     lines[lastHighlighted].classList.remove('active');
+  //   }
+  //   lines[targetIndex].classList.add('active');
+  //   // REMOVED: lines[targetIndex].scrollIntoView - this was causing auto scroll
+  //   lastHighlighted = targetIndex;
+  // }
+}
+
+// Detect when user is manually scrolling - pause any future auto
+
+
+playBtn.addEventListener('click', async ()=>{initAudioEngine();if(audioContext && audioContext.state==='suspended') await audioContext.resume();if(tracks.length===0){addBtn.click();return;}if(isPlaying){audio.pause();isPlaying=false;playBtn.textContent='▶';}else{if(currentIndex===-1) playTrack(0); else audio.play().then(()=>{isPlaying=true;playBtn.textContent='❚❚';});}});
+prevBtn.addEventListener('click',()=>{ playPrevTrack(); });
+nextBtn.addEventListener('click',()=>{ playNextTrack(); });
+function updateProgressFromEvent(e){const rect=progressBar.getBoundingClientRect();const clientX=e.touches ? e.touches[0].clientX : e.clientX;let pct=(clientX-rect.left)/rect.width;pct=Math.max(0,Math.min(1,pct));progressFill.style.width=(pct*100)+'%';currTimeEl.textContent=formatTime(pct*audio.duration);return pct;}
+function seekToPct(pct){if(!isNaN(audio.duration)){audio.currentTime=pct*audio.duration;}}
+progressBar.addEventListener('mousedown', e=>{isDragging=true;const pct=updateProgressFromEvent(e);seekToPct(pct);});
+window.addEventListener('mousemove', e=>{if(!isDragging) return;const pct=updateProgressFromEvent(e);seekToPct(pct);});
+window.addEventListener('mouseup', e=>{if(isDragging){const pct=updateProgressFromEvent(e);seekToPct(pct);isDragging=false;}});
+progressBar.addEventListener('touchstart', e=>{isDragging=true;const pct=updateProgressFromEvent(e);seekToPct(pct);e.preventDefault();},{passive:false});
+progressBar.addEventListener('touchmove', e=>{if(!isDragging) return;const pct=updateProgressFromEvent(e);seekToPct(pct);e.preventDefault();},{passive:false});
+progressBar.addEventListener('touchend', e=>{isDragging=false;});
+progressBar.addEventListener('click', e=>{if(isDragging) return;const pct=updateProgressFromEvent(e);seekToPct(pct);});
+audio.addEventListener('timeupdate',()=>{if(isDragging) return;const pct=(audio.currentTime/audio.duration);if(!isNaN(pct)){progressFill.style.width=(pct*100)+'%';}currTimeEl.textContent=formatTime(audio.currentTime);});
+audio.addEventListener('loadedmetadata',()=>{totalTimeEl.textContent=formatTime(audio.duration);});
+
+let isRepeatOn = false;
+let isShuffleOn = false;
+let shuffleHistory = []; // to avoid repeats
+let shufflePointer = -1;
+
+function getNextShuffleIndex(){
+  if(tracks.length===0) return -1;
+  if(tracks.length===1) return 0;
+  // If we have forward history from prev presses
+  if(shufflePointer >=0 && shufflePointer < shuffleHistory.length-1){
+    shufflePointer++;
+    return shuffleHistory[shufflePointer];
+  }
+  let randomIdx;
+  // Avoid last 60% of history to make true shuffle
+  let attempts=0;
+  do{
+    randomIdx = Math.floor(Math.random() * tracks.length);
+    attempts++;
+  } while(attempts<10 && shuffleHistory.slice(-Math.ceil(tracks.length*0.6)).includes(randomIdx));
+  // Also avoid current
+  if(randomIdx===currentIndex && tracks.length>1){
+    randomIdx = (randomIdx+1)%tracks.length;
+  }
+  shuffleHistory.push(randomIdx);
+  if(shuffleHistory.length>tracks.length*2) shuffleHistory.shift();
+  shufflePointer = shuffleHistory.length-1;
+  return randomIdx;
+}
+function getPrevShuffleIndex(){
+  if(shuffleHistory.length===0) return currentIndex;
+  if(shufflePointer>0){
+    shufflePointer--;
+    return shuffleHistory[shufflePointer];
+  }
+  // No history, pick random previous
+  return Math.floor(Math.random()*tracks.length);
+}
+function playNextTrack(){
+  if(tracks.length===0) return;
+  if(isShuffleOn){
+    const idx = getNextShuffleIndex();
+    if(idx>=0) playTrack(idx);
+  } else {
+    let idx=currentIndex+1;
+    if(idx>=tracks.length) idx=0;
+    playTrack(idx);
+  }
+}
+function playPrevTrack(){
+  if(tracks.length===0) return;
+  if(isShuffleOn){
+    const idx = getPrevShuffleIndex();
+    if(idx>=0) playTrack(idx);
+  } else {
+    let idx=currentIndex-1;
+    if(idx<0) idx=tracks.length-1;
+    playTrack(idx);
+  }
+}
+
+repeatBtn.addEventListener('click', ()=>{
+  isRepeatOn = !isRepeatOn;
+  if(isRepeatOn){
+    repeatBtn.style.color = '#00FFDD';
+    repeatBtn.style.textShadow = '0 0 8px #00FFDD';
+    isShuffleOn = false;
+    shuffleBtn.style.color = '';
+    shuffleBtn.style.textShadow = '';
+    nowArtist.textContent = '🔁 REPEAT ON • Same song looping';
+  } else {
+    repeatBtn.style.color = '';
+    repeatBtn.style.textShadow = '';
+    nowArtist.textContent = isPlaying ? 'PLAYING • BEST SOUND HD' : 'TAP + ADD MUSIC';
+  }
+});
+
+shuffleBtn.addEventListener('click', ()=>{
+  isShuffleOn = !isShuffleOn;
+  if(isShuffleOn){
+    shuffleBtn.style.color = '#00FFDD';
+    shuffleBtn.style.textShadow = '0 0 8px #00FFDD';
+    isRepeatOn = false;
+    repeatBtn.style.color = '';
+    repeatBtn.style.textShadow = '';
+    shuffleHistory = currentIndex>=0 ? [currentIndex] : [];
+    shufflePointer = shuffleHistory.length-1;
+    nowArtist.textContent = '🔀 SHUFFLE ON • True random';
+  } else {
+    shuffleBtn.style.color = '';
+    shuffleBtn.style.textShadow = '';
+    shuffleHistory = [];
+    shufflePointer = -1;
+    nowArtist.textContent = isPlaying ? 'PLAYING • BEST SOUND HD' : 'TAP + ADD MUSIC';
+  }
+});
+
+audio.addEventListener('ended',()=>{
+  if(tracks.length===0) return;
+  if(isRepeatOn){
+    playTrack(currentIndex);
+  } else if(isShuffleOn){
+    const idx = getNextShuffleIndex();
+    if(idx>=0) playTrack(idx);
+  } else {
+    let idx=currentIndex+1;
+    if(idx>=tracks.length) idx=0;
+    playTrack(idx);
+  }
+});
+
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+</script>
+
+<script>
+
+
+let vocalStrength=0.62, audioCtx, srcNode, masterGain, karaokeChain=[], isKaraokeOn=false;
+
+function cleanupAudioGraph(){
+ try{
+  if(srcNode){ try{srcNode.disconnect();}catch{} }
+  karaokeChain.forEach(n=>{ try{n.disconnect();}catch{} });
+ }catch{}
+ karaokeChain=[];
+}
+
+function setupK(){
+ try{
+  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  cleanupAudioGraph();
+  
+  srcNode = audioCtx.createMediaElementSource(audio);
+  const split = audioCtx.createChannelSplitter(2);
+  const merger = audioCtx.createChannelMerger(2);
+
+  // Keep original gains
+  const leftOrig = audioCtx.createGain(); leftOrig.gain.value=1;
+  const rightOrig = audioCtx.createGain(); rightOrig.gain.value=1;
+  
+  // Inverted gains - only for vocal range
+  const leftInv = audioCtx.createGain();
+  const rightInv = audioCtx.createGain();
+  leftInv.gain.value = -vocalStrength;
+  rightInv.gain.value = -vocalStrength;
+
+  // VOCAL BAND FILTER - only cancel voice where voice lives (300Hz-3400Hz)
+  // This is why it was scratchy before: it was cancelling bass & highs too
+  const vocalBandL = audioCtx.createBiquadFilter();
+  vocalBandL.type='bandpass'; vocalBandL.frequency.value=1100; vocalBandL.Q.value=0.65;
+  const vocalBandR = audioCtx.createBiquadFilter();
+  vocalBandR.type='bandpass'; vocalBandR.frequency.value=1100; vocalBandR.Q.value=0.65;
+  
+  const vocalHighL = audioCtx.createBiquadFilter();
+  vocalHighL.type='peaking'; vocalHighL.frequency.value=2500; vocalHighL.Q.value=0.9; vocalHighL.gain.value=2;
+  const vocalHighR = audioCtx.createBiquadFilter();
+  vocalHighR.type='peaking'; vocalHighR.frequency.value=2500; vocalHighR.Q.value=0.9; vocalHighR.gain.value=2;
+
+  // Keep bass & air untouched - prevents scratchy
+  const bassKeepL = audioCtx.createBiquadFilter(); bassKeepL.type='lowpass'; bassKeepL.frequency.value=180;
+  const bassKeepR = audioCtx.createBiquadFilter(); bassKeepR.type='lowpass'; bassKeepR.frequency.value=180;
+  const airKeepL = audioCtx.createBiquadFilter(); airKeepL.type='highpass'; airKeepL.frequency.value=8000;
+  const airKeepR = audioCtx.createBiquadFilter(); airKeepR.type='highpass'; airKeepR.frequency.value=8000;
+
+  // Mid processing nodes
+  const leftMidSum = audioCtx.createGain();
+  const rightMidSum = audioCtx.createGain();
+  const leftFinal = audioCtx.createGain();
+  const rightFinal = audioCtx.createGain();
+
+  // Clean up harshness
+  const hp = audioCtx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=75;
+  const lp = audioCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=14500;
+  
+  // Super smooth compressor - stops clipping scratch
+  const comp = audioCtx.createDynamicsCompressor();
+  comp.threshold.value=-20; comp.knee.value=28; comp.ratio.value=4; comp.attack.value=0.015; comp.release.value=0.28;
+  
+  // Master with headroom - critical for no scratch
+  masterGain = audioCtx.createGain(); masterGain.gain.value=0.0;
+
+  // Routing: L + (-R filtered) , R + (-L filtered)
+  // Left channel
+  split.connect(leftOrig, 0);
+  split.connect(rightInv, 1);
+  rightInv.connect(vocalBandR);
+  vocalBandR.connect(vocalHighR);
+  leftOrig.connect(leftFinal);
+  vocalHighR.connect(leftMidSum);
+  leftMidSum.connect(leftFinal);
+  
+  // Right channel
+  split.connect(rightOrig, 1);
+  split.connect(leftInv, 0);
+  leftInv.connect(vocalBandL);
+  vocalBandL.connect(vocalHighL);
+  rightOrig.connect(rightFinal);
+  vocalHighL.connect(rightMidSum);
+  rightMidSum.connect(rightFinal);
+  
+  // Merge back to stereo
+  leftFinal.connect(merger, 0, 0);
+  rightFinal.connect(merger, 0, 1);
+  
+  merger.connect(hp); hp.connect(lp); lp.connect(comp); comp.connect(masterGain);
+  masterGain.connect(audioCtx.destination);
+  srcNode.connect(split);
+  
+  // Smooth fade in - no pop/scratch on enable
+  masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  masterGain.gain.linearRampToValueAtTime(0.82, audioCtx.currentTime+0.12);
+
+  karaokeChain=[split,merger,leftOrig,rightOrig,leftInv,rightInv,vocalBandL,vocalBandR,vocalHighL,vocalHighR,bassKeepL,bassKeepR,airKeepL,airKeepR,leftMidSum,rightMidSum,leftFinal,rightFinal,hp,lp,comp,masterGain];
+  window._k={leftInv,rightInv,lp,hp,masterGain,comp,vocalBandL,vocalBandR};
+  isKaraokeOn=true;
+  console.log('DEXU Smooth Karaoke ON - vocal band only, no scratch');
+ }catch(e){console.log('Karaoke smooth error', e)}
+}
+
+function disableK(){
+ try{
+  if(masterGain && audioCtx){
+   // Smooth fade out - no pop
+   masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+   setTimeout(()=>{
+    cleanupAudioGraph();
+    try{
+     if(srcNode){ try{srcNode.disconnect();}catch{} }
+     srcNode=audioCtx.createMediaElementSource(audio);
+     srcNode.connect(audioCtx.destination);
+    }catch{}
+    isKaraokeOn=false;
+   }, 120);
+  } else {
+   cleanupAudioGraph();
+   isKaraokeOn=false;
+  }
+ }catch(e){ isKaraokeOn=false; }
+}
+
+document.getElementById('vocalRange')?.addEventListener('input',e=>{
+ vocalStrength=e.target.value/100;
+ document.getElementById('vocalVal').textContent=e.target.value+'%';
+ if(window._k && window._k.leftInv && audioCtx){
+  try{
+   window._k.leftInv.gain.setTargetAtTime(-vocalStrength, audioCtx.currentTime, 0.08);
+   window._k.rightInv.gain.setTargetAtTime(-vocalStrength, audioCtx.currentTime, 0.08);
+  }catch{}
+ }
+});
+
+document.getElementById('cleanChk')?.addEventListener('change',e=>{
+ if(window._k && window._k.lp && audioCtx){
+  window._k.lp.frequency.setTargetAtTime(e.target.checked?12500:16000, audioCtx.currentTime, 0.1);
+ }
+});
+
+let karaBtn=document.getElementById('karaokeBtn');
+karaBtn?.addEventListener('click',()=>{
+ setTimeout(()=>{
+  const btn=document.getElementById('karaokeBtn');
+  const on=btn && (btn.innerHTML.includes('ON') || btn.classList.contains('active'));
+  const panel=document.getElementById('vocalControls');
+  if(panel) panel.style.display=on?'block':'none';
+  if(on){ setupK(); } else { disableK(); }
+ },250);
+});
+
+
+// Lyrics multi-source + manual control
+
+let lyrCache=JSON.parse(localStorage.getItem('dexuLyr')||'{}');
+function cleanTitle(t){
+ return t.replace(/\.mp3$/i,'').replace(/\(.*?\)/g,'').replace(/\[.*?\]/g,'').replace(/official video|official music video|lyric video|lyrics|audio|hd|hq|4k/gi,'').replace(/feat\.|ft\.|featuring/gi,'').replace(/\s{2,}/g,' ').trim();
+}
+function cleanArtist(a){ return a.replace(/\(.*?\)/g,'').replace(/\[.*?\]/g,'').trim(); }
+async function fetchLrclibExact(a,t){
+ try{let r=await fetch('https://lrclib.net/api/get?artist='+encodeURIComponent(a)+'&track='+encodeURIComponent(t)); if(r.ok){let j=await r.json(); if(j.plainLyrics) return {txt:j.plainLyrics, src:'lrclib exact'};}}catch{} return null;
+}
+async function fetchLrclibSearch(q){
+ try{let r=await fetch('https://lrclib.net/api/search?q='+encodeURIComponent(q)); if(r.ok){let j=await r.json(); if(j[0]?.plainLyrics) return {txt:j[0].plainLyrics, src:'lrclib search'};}}catch{} return null;
+}
+async function fetchOvh(a,t){
+ try{let r=await fetch('https://api.lyrics.ovh/v1/'+encodeURIComponent(a)+'/'+encodeURIComponent(t)); if(r.ok){let j=await r.json(); if(j.lyrics) return {txt:j.lyrics, src:'lyrics.ovh'};}}catch{} return null;
+}
+function displayLyr(txt, srcInfo){ srcInfo=null; // hidden
+ let body=document.querySelector('.lyrics-body'); if(!body) return;
+ body.style.overflowY='auto'; body.style.animation='none'; body.style.touchAction='pan-y';
+ body.innerHTML=''; txt.split('\n').forEach(l=>{let d=document.createElement('div'); d.textContent=l; d.style.padding='3px 0'; d.style.fontSize='14px'; d.style.lineHeight='1.4'; body.appendChild(d);}); body.scrollTop=0;
+ let lk=document.getElementById('lkLyrics'); if(lk) lk.innerHTML=txt.split('\n').slice(0,4).join('<br>');
+ // Source caption removed per user request - no caption at bottom
+}
+async function fetchLyrics(){
+ let cur=tracks[currentIndex]; if(!cur) return;
+ let rawName=(cur.name||'').replace('.mp3','');
+ let artist=cleanArtist(cur.artist||'');
+ let title=cleanTitle(cur.name||'');
+ if(!artist && rawName.includes(' - ')){ let p=rawName.split(' - '); artist=cleanArtist(p[0]); title=cleanTitle(p[1]); }
+ let key=(artist+'|'+title).toLowerCase();
+ if(lyrCache[key]){ displayLyr(lyrCache[key].txt || lyrCache[key], lyrCache[key].src||'cache'); return; }
+ displayLyr('Searching lyrics...', 'searching');
+ const attempts=[
+  [artist,title],
+  [artist, title.split(' ').slice(0,4).join(' ')],
+  ['', title],
+  [artist.split(' ')[0]||'', title],
+  [artist, '']
+ ];
+ let result=null;
+ for(let [a,t] of attempts){
+  if(!t && !a) continue;
+  result = await fetchLrclibExact(a,t); if(result) break;
+  result = await fetchOvh(a,t); if(result) break;
+  result = await fetchLrclibSearch((a+' '+t).trim()); if(result) break;
+ }
+ if(!result && title){ result = await fetchLrclibSearch(title); }
+ if(result && result.txt){
+  lyrCache[key]={txt:result.txt, src:result.src};
+  try{ localStorage.setItem('dexuLyr', JSON.stringify(lyrCache)); }catch{}
+  displayLyr(result.txt, result.src);
+ } else {
+  displayLyr('Lyrics not found.\nTap ✎ to paste manually.\nTip: Artist - Title.mp3', 'not found');
+ }
+}
+
+// Hook
+let origPlay=window.playTrack;
+if(origPlay){window.playTrack=function(...a){origPlay.apply(this,a); setTimeout(()=>{let lb=document.getElementById('lyricsBtn'); if(lb&&lb.innerHTML.includes('ON')) fetchLyrics();},400);}}
+document.getElementById('lyricsBtn')?.addEventListener('click',()=>{setTimeout(()=>{if(document.getElementById('lyricsBtn').innerHTML.includes('ON')) fetchLyrics();},300);});
+// Manual controls
+document.addEventListener('click',e=>{
+ if(e.target.id==='lyricsUpBtn'){let b=document.querySelector('.lyrics-body'); if(b) b.scrollBy({top:-80, behavior:'smooth'});}
+ if(e.target.id==='lyricsDownBtn'){let b=document.querySelector('.lyrics-body'); if(b) b.scrollBy({top:80, behavior:'smooth'});}
+ if(e.target.id==='lyricsEditBtn'){let p=document.getElementById('lyricsEditPanel'); let ta=document.getElementById('lyricsEditArea'); let b=document.querySelector('.lyrics-body'); ta.value=b?b.innerText:''; p.classList.add('active');}
+ if(e.target.id==='cancelLyr'){document.getElementById('lyricsEditPanel').classList.remove('active');}
+ if(e.target.id==='saveLyr'){let ta=document.getElementById('lyricsEditArea').value; if(ta.trim()){let cur=tracks[currentIndex]; let key=(cur.artist||'')+'|'+(cur.name||''); lyrCache[key]=ta; localStorage.setItem('dexuLyr', JSON.stringify(lyrCache)); displayLyr(ta); document.getElementById('lyricsEditPanel').classList.remove('active');}}
+});
+// Add up/down/edit buttons to lyrics box
+let box=document.querySelector('.lyrics-box'); if(box){let ctrl=document.createElement('div'); ctrl.className='lyrics-controls-hidden'; ctrl.innerHTML='<button class="lyrics-ctrl-btn" id="lyricsUpBtn">▲</button><button class="lyrics-ctrl-btn" id="lyricsDownBtn">▼</button><button class="lyrics-ctrl-btn" id="lyricsEditBtn">✎</button>'; box.prepend(ctrl);}
+</script>
+
+<script>
+function fixScrub(){
+ const a=document.querySelector('audio'); if(!a) return;
+ document.querySelectorAll('input[type=range]').forEach(b=>{
+  if(b.dataset.f) return; b.dataset.f=1;
+  b.addEventListener('input',e=>{ if(a.duration) a.currentTime=(e.target.value/(e.target.max||100))*a.duration; });
+  b.addEventListener('touchmove',e=>{
+   let r=b.getBoundingClientRect(); let x=e.touches[0].clientX-r.left; let p=Math.max(0,Math.min(1,x/r.width)); b.value=p*(b.max||100); if(a.duration) a.currentTime=p*a.duration;
+  },{passive:true});
+ });
+ a.addEventListener('timeupdate',()=>{
+  if(!a.duration) return; let pct=(a.currentTime/a.duration)*100;
+  document.querySelectorAll('input[type=range]').forEach(b=>{ if(document.activeElement!==b) b.value=pct; });
+ });
+}
+window.addEventListener('load',()=>setTimeout(fixScrub,800));
+window.addEventListener('orientationchange',()=>setTimeout(fixScrub,500));
+setInterval(fixScrub,2000);
+</script>
+
+<script>
+// --- UPGRADED FINGER HOLD SCROLL FOR LYRICS - KEEP DESIGN ---
+(function(){
+ function initFingerScroll(){
+  const body = document.querySelector('.lyrics-body');
+  if(!body) { setTimeout(initFingerScroll, 500); return; }
+  
+  let startY = 0;
+  let startScrollTop = 0;
+  let isDragging = false;
+  let isTouch = false;
+
+  // Improve scroll sensitivity
+  body.style.scrollBehavior = 'auto';
+
+  body.addEventListener('touchstart', (e)=>{
+    isTouch = true;
+    isDragging = true;
+    startY = e.touches[0].clientY;
+    startScrollTop = body.scrollTop;
+    body.classList.add('dragging');
+    // Stop any momentum
+    body.style.scrollSnapType = 'none';
+  }, {passive: true});
+
+  body.addEventListener('touchmove', (e)=>{
+    if(!isDragging) return;
+    const y = e.touches[0].clientY;
+    const diff = startY - y; // positive when swiping up
+    body.scrollTop = startScrollTop + diff;
+    // Allow native scroll too, but we control it
+  }, {passive: true});
+
+  body.addEventListener('touchend', ()=>{
+    isDragging = false;
+    isTouch = false;
+    body.classList.remove('dragging');
+    setTimeout(()=>{ body.style.scrollBehavior = ''; }, 100);
+  }, {passive: true});
+
+  // Mouse drag for laptop testing (same design, hold + drag)
+  body.addEventListener('mousedown', (e)=>{
+    if(isTouch) return;
+    isDragging = true;
+    startY = e.clientY;
+    startScrollTop = body.scrollTop;
+    body.classList.add('dragging');
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e)=>{
+    if(!isDragging || isTouch) return;
+    const diff = startY - e.clientY;
+    body.scrollTop = startScrollTop + diff;
+  });
+
+  window.addEventListener('mouseup', ()=>{
+    if(!isTouch){
+      isDragging = false;
+      body.classList.remove('dragging');
+    }
+  });
+
+  // Keep existing up/down buttons working
+  console.log('DEXU Finger Hold Scroll Ready');
+ }
+ window.addEventListener('load', ()=> setTimeout(initFingerScroll, 800));
+ setInterval(()=>{
+   const b=document.querySelector('.lyrics-body');
+   if(b && !b._fingerUpgraded){
+     b._fingerUpgraded=true;
+     // re-init if DOM replaced
+   }
+ }, 2000);
+})();
+</script>
+
+
+<script>
+// FORCE MANUAL LYRICS CONTROL - NO AUTO
+(function(){
+ const body = document.getElementById('lyricsBody') || document.querySelector('.lyrics-body');
+ if(!body) return;
+ 
+ let isHolding = false;
+ 
+ // When user touches/holds - STOP everything
+ body.addEventListener('touchstart', ()=>{
+  isHolding = true;
+  body.dataset.userControl = 'true';
+  // Stop any intervals
+  body.style.scrollBehavior = 'auto';
+ }, {passive:true});
+ 
+ body.addEventListener('touchend', ()=>{
+  isHolding = false;
+  setTimeout(()=>{ body.style.scrollBehavior = 'smooth'; }, 200);
+ }, {passive:true});
+ 
+ body.addEventListener('mousedown', ()=>{
+  isHolding = true;
+  body.dataset.userControl = 'true';
+ });
+ 
+ window.addEventListener('mouseup', ()=>{
+  isHolding = false;
+ });
+ 
+ // Prevent any script from auto-scrolling while user holds
+ const originalScrollTop = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+ // We don't override, just monitor
+ 
+ console.log('DEXU Manual Lyrics Control: Auto-scroll DISABLED, finger control ENABLED');
+})();
+</script>
+
+
+<script>
+// --- DEXU MUSIC PLAYER - LOCKSCREEN CONTROLS FIX ---
+(function(){
+  const audio = document.getElementById('audioPlayer');
+  if(!audio) return;
+  let shouldBePlaying = false;
+  window.updateMediaSessionLock = function(){
+    if(!('mediaSession' in navigator)) return;
+    try{
+      const track = tracks[currentIndex];
+      const title = track ? track.name : 'DEXU Music Player';
+      const parts = title.split(' - ');
+      const tTitle = parts[0] || title;
+      const tArtist = parts[1] || 'DEXU Music Player';
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: tTitle,
+        artist: tArtist,
+        album: 'DEXU Music Player',
+        artwork: [
+          {src: 'icon-192.png', sizes: '192x192', type: 'image/png'},
+          {src: 'icon-512.png', sizes: '512x512', type: 'image/png'},
+          {src: 'icon-512.png', sizes: '512x512', type: 'image/png'}
+        ]
+      });
+      if('setPositionState' in navigator.mediaSession && audio.duration && isFinite(audio.duration)){
+        navigator.mediaSession.setPositionState({
+          duration: audio.duration,
+          playbackRate: 1,
+          position: audio.currentTime||0
+        });
+      }
+    }catch(e){ console.log('MediaSession update err', e); }
+  };
+
+  audio.addEventListener('play', ()=>{
+    shouldBePlaying=true;
+    isPlaying=true;
+    if('mediaSession' in navigator) navigator.mediaSession.playbackState='playing';
+    window.updateMediaSessionLock();
+  });
+  audio.addEventListener('pause', ()=>{
+    if(!document.hidden){
+      shouldBePlaying=false;
+      isPlaying=false;
+    }
+    if('mediaSession' in navigator) navigator.mediaSession.playbackState = shouldBePlaying ? 'playing' : 'paused';
+  });
+
+  if('mediaSession' in navigator){
+    try{
+      navigator.mediaSession.setActionHandler('play', ()=>{ audio.play().then(()=>{ shouldBePlaying=true; isPlaying=true; playBtn.textContent='❚❚'; }).catch(()=>{}); });
+      navigator.mediaSession.setActionHandler('pause', ()=>{ shouldBePlaying=false; isPlaying=false; audio.pause(); playBtn.textContent='▶'; });
+      navigator.mediaSession.setActionHandler('previoustrack', ()=>{ if(typeof playPrevTrack==='function') playPrevTrack(); });
+      navigator.mediaSession.setActionHandler('nexttrack', ()=>{ if(typeof playNextTrack==='function') playNextTrack(); });
+      navigator.mediaSession.setActionHandler('seekbackward', (d)=>{ audio.currentTime=Math.max(0, audio.currentTime-(d.seekOffset||10)); });
+      navigator.mediaSession.setActionHandler('seekforward', (d)=>{ audio.currentTime=Math.min(audio.duration, audio.currentTime+(d.seekOffset||10)); });
+      navigator.mediaSession.setActionHandler('seekto', (d)=>{ if(d.seekTime!==undefined) audio.currentTime=d.seekTime; });
+      navigator.mediaSession.setActionHandler('stop', ()=>{ shouldBePlaying=false; audio.pause(); });
+    }catch(e){}
+  }
+
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden){
+      if(shouldBePlaying && audio.paused){ audio.play().catch(()=>{}); }
+      if('mediaSession' in navigator) navigator.mediaSession.playbackState='playing';
+    } else {
+      window.updateMediaSessionLock();
+    }
+  });
+
+  setInterval(()=>{
+    if(shouldBePlaying && !audio.paused && 'mediaSession' in navigator && 'setPositionState' in navigator.mediaSession){
+      try{
+        if(audio.duration) navigator.mediaSession.setPositionState({duration: audio.duration, playbackRate:1, position: audio.currentTime||0});
+      }catch(e){}
+    }
+  }, 3000);
+
+  // Hook playTrack to update lockscreen
+  const origPlayTrack = window.playTrack;
+  if(origPlayTrack){
+    const check = setInterval(()=>{
+      if(window.playTrack && !window.playTrack._locked){
+        const old = window.playTrack;
+        window.playTrack = function(...a){ const r=old.apply(this,a); setTimeout(()=>{ shouldBePlaying=true; window.updateMediaSessionLock(); },400); return r; };
+        window.playTrack._locked=true;
+        clearInterval(check);
+      }
+    },500);
+  }
+
+  console.log('DEXU Lockscreen Fix ACTIVE: Next/Back/Play/Pause on lockscreen enabled');
+})();
+</script>
+
+
+<script>
+// Remove karaoke/lyrics references safely - keep app running
+document.addEventListener('DOMContentLoaded', ()=>{
+  ['karaokeBtn','lyricsBtn','lyricsPanel','lyricsStatus','orb-right-lyrics','orbRightLyrics'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display='none';
+  });
+  document.querySelectorAll('.karaoke-btn,.lyrics-toggle-btn,.orb-right-lyrics,.buttons-stack').forEach(el=>el.style.display='none');
+  // Move playlist up
+  const queue = document.querySelector('.queue') || document.getElementById('queueList')?.parentElement;
+  if(queue){
+    queue.style.marginTop='0';
+    queue.style.flex='1';
+  }
+  // Hide lyrics box completely
+  const lyrBox = document.querySelector('.lyrics-box');
+  if(lyrBox) lyrBox.style.display='none';
+});
+</script>
+
+</body>
+</html>
