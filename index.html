@@ -118,7 +118,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(600px 
   </div>
 </div>
 
-<audio id="audioPlayer" preload="metadata" playsinline></audio>
+<audio id="audioPlayer" preload="auto" playsinline></audio>
 
 <script>
 // === DEXU CLEAN CORE - No unused code ===
@@ -324,13 +324,16 @@ async function playTrack(index){
   currentIndex=index;
   const track=tracks[index];
   audio.src=track.url;
+  shouldPlay=true;
   audio.play().then(()=>{
     isPlaying=true;
+    shouldPlay=true;
     playBtn.textContent='❚❚';
     nowTitle.textContent=track.name;
     nowArtist.textContent='PLAYING';
     updateMediaSession();
-  }).catch(e=>{console.log(e);});
+    updateMediaSessionPosition();
+  }).catch(e=>{console.log(e); shouldPlay=true;});
   renderQueue();
 }
 
@@ -462,17 +465,27 @@ progressBar.addEventListener('click', e=>{
   if(!isNaN(audio.duration)) audio.currentTime=p*audio.duration;
 });
 
-// Lockscreen media session
+// === LOCK SCREEN FIX - Music continues when screen off ===
+let shouldPlay=false;
+
 function updateMediaSession(){
   if(!('mediaSession' in navigator)) return;
   try{
+    const title = nowTitle.textContent || 'DEXU';
+    const artist = tracks[currentIndex] ? tracks[currentIndex].name : 'DEXU Music Player';
     navigator.mediaSession.metadata=new MediaMetadata({
-      title: nowTitle.textContent || 'DEXU',
-      artist: 'DEXU Music Player',
-      album: 'DEXU',
-      artwork: [{src:'icon-192.png', sizes:'192x192', type:'image/png'}, {src:'icon-512.png', sizes:'512x512', type:'image/png'}]
+      title: title,
+      artist: artist,
+      album: 'DEXU Music Player',
+      artwork: [
+        {src:'icon-192.png', sizes:'192x192', type:'image/png'},
+        {src:'icon-512.png', sizes:'512x512', type:'image/png'}
+      ]
     });
     navigator.mediaSession.playbackState=isPlaying?'playing':'paused';
+    if('setPositionState' in navigator.mediaSession && audio.duration){
+      try{navigator.mediaSession.setPositionState({duration:audio.duration, playbackRate:1, position:audio.currentTime||0});}catch(e){}
+    }
   }catch(e){}
 }
 function updateMediaSessionPosition(){
@@ -480,15 +493,75 @@ function updateMediaSessionPosition(){
     try{navigator.mediaSession.setPositionState({duration:audio.duration, playbackRate:1, position:audio.currentTime});}catch(e){}
   }
 }
+
+// Prevent pause when screen locks - CRITICAL
+audio.addEventListener('pause', ()=>{
+  // If page is hidden (lock screen), don't mark as shouldPlay=false - keep it true so it resumes
+  if(document.hidden){
+    console.log('DEXU: Pause while hidden - keeping shouldPlay true for lockscreen');
+    return;
+  }
+  shouldPlay=false;
+  isPlaying=false;
+  playBtn.textContent='▶';
+  updateMediaSession();
+});
+
+audio.addEventListener('play', ()=>{
+  shouldPlay=true;
+  isPlaying=true;
+  playBtn.textContent='❚❚';
+  updateMediaSession();
+});
+
+// When user returns from lock screen or app comes back, resume if it should be playing
+document.addEventListener('visibilitychange', ()=>{
+  if(!document.hidden && shouldPlay && audio.paused && audio.src){
+    console.log('DEXU: Resuming after visibility change');
+    audio.play().catch(()=>{});
+  }
+  if(!document.hidden){
+    updateMediaSession();
+  }
+});
+
+// Handle interruptions - auto resume
+audio.addEventListener('ended', ()=>{
+  if(isRepeat) audio.play();
+  else playNext();
+});
+
 if('mediaSession' in navigator){
   try{
-    navigator.mediaSession.setActionHandler('play', ()=>{audio.play();isPlaying=true;playBtn.textContent='❚❚';});
-    navigator.mediaSession.setActionHandler('pause', ()=>{audio.pause();isPlaying=false;playBtn.textContent='▶';});
+    navigator.mediaSession.setActionHandler('play', async ()=>{
+      shouldPlay=true;
+      try{await audio.play(); isPlaying=true; playBtn.textContent='❚❚'; updateMediaSession();}catch(e){}
+    });
+    navigator.mediaSession.setActionHandler('pause', ()=>{
+      shouldPlay=false;
+      audio.pause();
+      isPlaying=false;
+      playBtn.textContent='▶';
+      updateMediaSession();
+    });
     navigator.mediaSession.setActionHandler('previoustrack', ()=>{prevBtn.click();});
     navigator.mediaSession.setActionHandler('nexttrack', ()=>{nextBtn.click();});
-    navigator.mediaSession.setActionHandler('seekto', d=>{if(d.seekTime!=null) audio.currentTime=d.seekTime;});
-  }catch(e){}
+    navigator.mediaSession.setActionHandler('seekbackward', (d)=>{audio.currentTime=Math.max(0, audio.currentTime-(d.seekOffset||10));});
+    navigator.mediaSession.setActionHandler('seekforward', (d)=>{audio.currentTime=Math.min(audio.duration, audio.currentTime+(d.seekOffset||10));});
+    navigator.mediaSession.setActionHandler('seekto', d=>{if(d.seekTime!=null) audio.currentTime=d.seekTime; updateMediaSessionPosition();});
+    console.log('DEXU: Lockscreen controls registered');
+  }catch(e){console.log('MediaSession error', e);}
 }
+
+// Wake Lock - keep screen awake while playing (optional, helps some phones)
+let wakeLock=null;
+async function requestWakeLock(){
+  if('wakeLock' in navigator){
+    try{wakeLock=await navigator.wakeLock.request('screen');}catch(e){}
+  }
+}
+audio.addEventListener('play', ()=>{requestWakeLock();});
+document.addEventListener('visibilitychange', ()=>{if(wakeLock!==null && document.visibilityState==='visible'){requestWakeLock();}});
 </script>
 </body>
 </html>
