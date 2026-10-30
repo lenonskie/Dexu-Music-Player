@@ -553,6 +553,97 @@ if('mediaSession' in navigator){
   }catch(e){console.log('MediaSession error', e);}
 }
 
+
+// === ONEPLUS 10R NO-SETTINGS KEEP-ALIVE ===
+let keepAliveCtx=null;
+let keepAliveOsc=null;
+let resumeLoop=null;
+
+function startKeepAlive(){
+  try{
+    if(!keepAliveCtx){
+      keepAliveCtx = new (window.AudioContext||window.webkitAudioContext)();
+    }
+    if(keepAliveCtx.state==='suspended') keepAliveCtx.resume();
+    // Ultra-light silent oscillator - just to keep audio session alive, no lag
+    if(!keepAliveOsc){
+      keepAliveOsc = keepAliveCtx.createOscillator();
+      const gain = keepAliveCtx.createGain();
+      gain.gain.value = 0.001; // inaudible
+      keepAliveOsc.frequency.value = 20; // below hearing
+      keepAliveOsc.connect(gain);
+      gain.connect(keepAliveCtx.destination);
+      keepAliveOsc.start();
+    }
+  }catch(e){}
+}
+
+function stopKeepAlive(){
+  try{
+    if(keepAliveOsc){ keepAliveOsc.stop(); keepAliveOsc.disconnect(); keepAliveOsc=null; }
+  }catch(e){}
+}
+
+function startResumeLoop(){
+  if(resumeLoop) clearInterval(resumeLoop);
+  resumeLoop = setInterval(()=>{
+    if(shouldPlay && audio.src && audio.paused){
+      console.log('DEXU: OnePlus auto-resume attempt');
+      audio.play().catch(()=>{});
+      if(keepAliveCtx && keepAliveCtx.state==='suspended') keepAliveCtx.resume();
+    }
+    // Keep media session alive - update position every 2 sec so lockscreen doesn't disappear
+    if(shouldPlay && isPlaying) updateMediaSessionPosition();
+  }, 1000);
+}
+
+// Start keep-alive when playing
+const origPlayTrack = playTrack;
+audio.addEventListener('play', ()=>{
+  startKeepAlive();
+  startResumeLoop();
+});
+audio.addEventListener('pause', ()=>{
+  // Don't stop keep-alive if hidden (lockscreen)
+  if(!document.hidden){
+    stopKeepAlive();
+    if(resumeLoop){ clearInterval(resumeLoop); resumeLoop=null; }
+  }
+});
+
+// OnePlus fix: When audio gets interrupted by OS, it fires 'emptied' or 'suspend' - auto resume
+audio.addEventListener('suspend', ()=>{
+  if(shouldPlay){
+    setTimeout(()=>{ if(audio.paused) audio.play().catch(()=>{}); }, 200);
+  }
+});
+
+// Prevent browser from pausing when tab hidden - force play
+let hiddenPlayAttempts=0;
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden && shouldPlay){
+    // We're going to lockscreen - start keep-alive
+    startKeepAlive();
+    hiddenPlayAttempts=0;
+  } else if(!document.hidden && shouldPlay && audio.paused){
+    // Came back - resume
+    hiddenPlayAttempts=0;
+    audio.play().catch(()=>{});
+    startKeepAlive();
+  }
+}, {passive:true});
+
+// Page lifecycle - OnePlus fires freeze/resume
+document.addEventListener('freeze', ()=>{
+  console.log('DEXU: Page frozen - keeping shouldPlay');
+});
+document.addEventListener('resume', ()=>{
+  if(shouldPlay && audio.paused){
+    audio.play().catch(()=>{});
+    startKeepAlive();
+  }
+});
+
 // Wake Lock - keep screen awake while playing (optional, helps some phones)
 let wakeLock=null;
 async function requestWakeLock(){
